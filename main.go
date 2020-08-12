@@ -122,6 +122,20 @@ func main() {
 		return
 	}
 
+	switch len(os.Args) {
+	case 3:
+		config.Scheme = os.Args[1]
+		config.SchemeRepositoryURL = os.Args[2]
+	case 2:
+		config.Scheme = os.Args[1]
+		config.SchemeRepositoryURL = ""
+	case 1:
+		// Nothing to do
+	default:
+		log.Error("too many arguments")
+		return
+	}
+
 	scheme, err := loadScheme(log, config)
 	if err != nil {
 		log.Error("retrieving color scheme", "err", err)
