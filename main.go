@@ -189,6 +189,16 @@ func main() {
 			// continue as if the result was the complete file from
 			// start.
 			if app.Files[file].Mode == "replace" {
+				if len(app.Files[file].StartMarker) == 0 {
+					log.Error("empty start marker")
+					continue
+				}
+
+				if len(app.Files[file].EndMarker) == 0 {
+					log.Error("empty start marker")
+					continue
+				}
+
 				raw, err := ioutil.ReadFile(destination)
 				if err != nil {
 					log.Error("loading destination file", "err", err)
