@@ -65,9 +65,8 @@ fn main() {
     };
 
     let mut body = String::new();
-    match res.read_to_string(&mut body) {
-        Err(err) => panic!("reading response body: {:?}", err),
-        _ => {}
+    if let Err(err) = res.read_to_string(&mut body) {
+        panic!("reading response body: {:?}", err);
     }
 
     if !res.status().is_success() {
