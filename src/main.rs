@@ -88,6 +88,11 @@ fn main() {
             Err(e) => fatal!("retrieving schemes list: {}", e),
         };
 
+    let templates_list: collections::HashMap<String, String> =
+        match get_yaml_file(client, config.templates_list_url) {
+            Ok(v) => v,
+            Err(e) => fatal!("retrieving templates list: {}", e),
+        };
 }
 
 fn get_yaml_file<T: for<'a> serde::Deserialize<'a>>(
