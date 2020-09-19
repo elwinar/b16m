@@ -2,8 +2,8 @@ use reqwest;
 use serde;
 use std::collections;
 use std::env;
+use std::error;
 use std::fs;
-use std::io::Read;
 
 macro_rules! fatal {
     ($($tt:tt)*) => {{
@@ -23,6 +23,21 @@ struct Config {
     #[serde(default = "default_templates_list_url")]
     templates_list_url: String,
     applications: collections::HashMap<String, Application>,
+}
+
+fn default_scheme_list_url() -> String {
+    github_file_url("chriskempson", "base16-schemes-source", "list.yaml")
+}
+
+fn default_templates_list_url() -> String {
+    github_file_url("chriskempson", "base16-templates-source", "list.yaml")
+}
+
+fn github_file_url(user: &str, repository: &str, url: &str) -> String {
+    format!(
+        "https://raw.githubusercontent.com/{}/{}/master/{}",
+        user, repository, url
+    )
 }
 
 #[derive(Debug, Default, serde::Deserialize)]
@@ -67,39 +82,22 @@ fn main() {
 
     let client = reqwest::blocking::Client::new();
 
-    let mut res = match client.get(&config.schemes_list_url).send() {
-        Ok(res) => res,
-        Err(err) => fatal!("retrieving schemes list: {}", err),
-    };
+    let schemes_list: collections::HashMap<String, String> =
+        match get_yaml_file(client, config.schemes_list_url) {
+            Ok(v) => v,
+            Err(e) => fatal!("retrieving schemes list: {}", e),
+        };
 
-    let mut body = String::new();
-    if let Err(err) = res.read_to_string(&mut body) {
-        fatal!("reading response body: {}", err);
-    }
-
-    if !res.status().is_success() {
-        fatal!("unexpected status: {} {}", res.status(), body);
-    }
-
-    let schemes_list: collections::HashMap<String, String> = match serde_yaml::from_str(&body) {
-        Ok(res) => res,
-        Err(err) => fatal!("parsing schemes list: {}", err),
-    };
-
-    println!("{:?}", schemes_list);
 }
 
-fn default_scheme_list_url() -> String {
-    github_file_url("chriskempson", "base16-schemes-source", "list.yaml")
+fn get_yaml_file<T: for<'a> serde::Deserialize<'a>>(
+    client: reqwest::blocking::Client,
+    url: String,
+) -> Result<T, Box<dyn error::Error>> {
+    let body = get_file(client, url)?;
+    Ok(serde_yaml::from_str::<T>(&body)?)
 }
 
-fn default_templates_list_url() -> String {
-    github_file_url("chriskempson", "base16-templates-source", "list.yaml")
-}
-
-fn github_file_url(user: &str, repository: &str, url: &str) -> String {
-    format!(
-        "https://raw.githubusercontent.com/{}/{}/master/{}",
-        user, repository, url
-    )
+fn get_file(client: reqwest::blocking::Client, url: String) -> Result<String, reqwest::Error> {
+    Ok(client.get(&url).send()?.error_for_status()?.text()?)
 }
