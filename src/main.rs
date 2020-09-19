@@ -74,7 +74,12 @@ fn main() {
         panic!("unexpected status: {:?} {}", res.status(), body);
     }
 
-    println!("{}", body);
+    let schemes_list: collections::HashMap<String, String> = match serde_yaml::from_str(&body) {
+        Ok(res) => res,
+        Err(err) => panic!("parsing schemes list: {:?}", err),
+    };
+
+    println!("{:?}", schemes_list);
 }
 
 fn default_scheme_list_url() -> String {
