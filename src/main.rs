@@ -5,6 +5,14 @@ use std::env;
 use std::fs;
 use std::io::Read;
 
+macro_rules! fatal {
+    ($($tt:tt)*) => {{
+        use std::io::Write;
+        writeln!(&mut ::std::io::stderr(), $($tt)*).unwrap();
+        ::std::process::exit(1)
+    }}
+}
+
 #[derive(Debug, Default, serde::Deserialize)]
 #[serde(default)]
 struct Config {
@@ -37,11 +45,11 @@ struct File {
 fn main() {
     let config = match fs::File::open("/home/elwinar/.config/b16m/config.yaml") {
         Ok(res) => res,
-        Err(err) => panic!("opening configuration file: {:?}", err),
+        Err(err) => fatal!("opening configuration file: {}", err),
     };
     let mut config: Config = match serde_yaml::from_reader(&config) {
         Ok(res) => res,
-        Err(err) => panic!("parsing configuration file: {:?}", err),
+        Err(err) => fatal!("parsing configuration file: {}", err),
     };
 
     let args: Vec<String> = env::args().collect();
@@ -54,28 +62,28 @@ fn main() {
             config.scheme = args[1].clone();
             config.scheme_repository_url = args[2].clone();
         }
-        _ => panic!("too many arguments"),
+        _ => fatal!("too many arguments"),
     };
 
     let client = reqwest::blocking::Client::new();
 
     let mut res = match client.get(&config.schemes_list_url).send() {
         Ok(res) => res,
-        Err(err) => panic!("retrieving schemes list: {:?}", err),
+        Err(err) => fatal!("retrieving schemes list: {}", err),
     };
 
     let mut body = String::new();
     if let Err(err) = res.read_to_string(&mut body) {
-        panic!("reading response body: {:?}", err);
+        fatal!("reading response body: {}", err);
     }
 
     if !res.status().is_success() {
-        panic!("unexpected status: {:?} {}", res.status(), body);
+        fatal!("unexpected status: {} {}", res.status(), body);
     }
 
     let schemes_list: collections::HashMap<String, String> = match serde_yaml::from_str(&body) {
         Ok(res) => res,
-        Err(err) => panic!("parsing schemes list: {:?}", err),
+        Err(err) => fatal!("parsing schemes list: {}", err),
     };
 
     println!("{:?}", schemes_list);
